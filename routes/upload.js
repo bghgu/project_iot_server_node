@@ -49,37 +49,46 @@ let options2 = {
     }
 }
 
+const selectPhotoUrl = "select * from USER"
+const insertLog = "insert into LOG(id, photo) values(?, ?)";
+
 router.post('/', upload.array('photo'), async (req, res) => {
     if(req.files.length != 0) {
-        let photoUrl = req.files ? req.files[0].location : null
-        options1.body.url = photoUrl;
-        const selectPhotoUrl = "select * from USER"
-        const insertLog = "insert into LOG(id) values ?";
+        options1.body.url = req.files ? req.files[0].location : null;
         let result = await request(options1);
-        faceId1 = result[0].faceId;
-        let userList = await db.FindAll(selectPhotoUrl);
-        for(i = 0; i < userList.length; i++) {
-            let temp = userList[i].photo;
-            let id = userList[i].id;
-            if(temp != null) {
-                options1.body.url = temp;
-                result2 = await request(options1);
-                faceId2 = result2[0].faceId;
-                options2.body.faceId1 = faceId1;
-                options2.body.faceId2 = faceId2;
-                result3 = await request(options2);
-                console.log(result3);
-                max = Math.max(max, result3.confidence);
+        let id2;
+        if(result.length != 0) {
+            faceId1 = result[0].faceId;
+            let userList = await db.FindAll(selectPhotoUrl);
+            for(i = 0; i < userList.length; i++) {
+                let temp = userList[i].photo;
+                let id = userList[i].id;
+                if(temp != null) {
+                    options1.body.url = temp;
+                    result2 = await request(options1);
+                    faceId2 = result2[0].faceId;
+                    options2.body.faceId1 = faceId1;
+                    options2.body.faceId2 = faceId2;
+                    result3 = await request(options2);
+                    max = Math.max(max, result3.confidence);
+                    if(Number(max) > 0.6) {
+                        id2 = id;
+                    }
+                }
             }
-        }
-        console.log(max);
-        if(Number(max) > 0.7) {
-            //await db.execute();
-            res.status(200).send("SUCCESS");
+            if(Number(max) > 0.6) {
+                await db.execute3(insertLog, id2, req.files[0].location);
+                res.status(200).send("SUCCESS");
+            }else {
+                console.log("다른 사람")
+                res.status(400).send("FAIL");
+            }
         }else {
+            console.log("얼굴 인식이 안됨")
             res.status(400).send("FAIL");
         }
     }else {
+        console.log("사진이 안찍힘")
         res.status(400).send("FAIL");
     }
 });

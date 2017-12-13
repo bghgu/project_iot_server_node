@@ -10,8 +10,4 @@ router.use('/log', log);
 const upload = require('./upload');
 router.use('/upload', upload);
 
-//test
-const test = require('./test');
-router.use('/test', test);
-
 module.exports = router;
